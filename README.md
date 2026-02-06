@@ -8,3 +8,4 @@ This repository manages infrastructure using Terraform.
 - envs/prod: production environment
 
 Each environment has its own Terraform state.
+  
