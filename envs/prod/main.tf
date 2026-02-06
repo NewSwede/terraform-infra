@@ -3,7 +3,7 @@ terraform {
     organization = "sylva-devops"
 
     workspaces {
-      name = "dev"
+      name = "prod"
     }
   }
 
@@ -19,6 +19,6 @@ provider "local" {}
 
 module "file_example" {
   source   = "../../modules/file"
-  filename = "dev.txt"
-  content  = "Hello from dev environment"
+  filename = "prod.txt"
+  content  = "Hello from prod environment"
 }
