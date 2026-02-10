@@ -22,5 +22,5 @@ provider "local" {}
 module "file_example" {
   source   = "../../modules/file"
   filename = "dev.txt"
-  content  = "Hello from dev environment"
+  content  = "Hello v2 from dev environment"
 }
