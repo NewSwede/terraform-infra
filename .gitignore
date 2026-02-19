@@ -1,4 +1,20 @@
-.terraform/
-*.tfstate
-*.tfstate.*
-terraform.tfvars
+# Terraform
+**/.terraform/*
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/crash.log
+**/crash.*.log
+
+# CLI creds / keys
+**/*.pem
+**/*.key
+**/*.p12
+**/*id_rsa*
+**/*id_ed25519*
+**/credentials
+**/.aws/*
+**/.ssh/*
+
+# OS
+.DS_Store
+Thumbs.db

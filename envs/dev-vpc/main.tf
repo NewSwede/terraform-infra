@@ -24,7 +24,6 @@ resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-
   tags = {
     Name = "dev-vpc"
     Env  = "dev"
@@ -139,6 +138,88 @@ resource "aws_instance" "bastion" {
 
   tags = {
     Name = "dev-bastion"
+    Env  = "dev"
+  }
+}
+
+resource "aws_eip" "nat" {
+  domain = "vpc"
+
+  tags = {
+    Name = "dev-nat-eip"
+    Env  = "dev"
+  }
+}
+
+resource "aws_nat_gateway" "nat_a" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public_a.id
+
+  tags = {
+    Name = "dev-nat-a"
+    Env  = "dev"
+  }
+
+  depends_on = [aws_internet_gateway.igw]
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "dev-rt-private"
+    Env  = "dev"
+  }
+}
+
+resource "aws_route" "private_internet_via_nat" {
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat_a.id
+}
+
+resource "aws_route_table_association" "private_a" {
+  subnet_id      = aws_subnet.private_a.id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_security_group" "private_ssh_from_bastion" {
+  name        = "dev-private-ssh"
+  description = "Allow SSH only from bastion SG"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "SSH from bastion SG"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ssh.id]
+  }
+
+  egress {
+    description = "Allow all outbound"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "dev-private-ssh"
+    Env  = "dev"
+  }
+}
+
+resource "aws_instance" "private_test" {
+  ami                         = data.aws_ami.al2023.id
+  instance_type               = "t3.micro"
+  subnet_id                   = aws_subnet.private_a.id
+  vpc_security_group_ids      = [aws_security_group.private_ssh_from_bastion.id]
+  key_name                    = "dev-key"
+  associate_public_ip_address = false
+
+  tags = {
+    Name = "dev-private-test"
     Env  = "dev"
   }
 }
