@@ -8,8 +8,26 @@ Infrastructure AWS complète déployée via Terraform :
 - EKS cluster
 - Backend distant S3 + DynamoDB locking
 
-## 🏗 Architecture
-(Diagramme ici)
+## Architecture Overview
+
+Infrastructure AWS organisée par environnement.
+
+- bootstrap/: création backend distant (S3 + DynamoDB)
+- envs/dev-vpc/: infrastructure réseau et compute
+- modules/: modules Terraform réutilisables
+
+## Design Decisions
+
+- Séparation bootstrap / env pour éviter problème "poule/œuf".
+- State distant pour collaboration.
+- Subnets privés pour instances applicatives.
+- NAT Gateway pour egress contrôlé.
+
+## Real-world Issues Encountered
+
+- Nodegroup CREATE_FAILED (instance non compatible Free Tier).
+- State lock non libéré après crash Terraform.
+- Service LoadBalancer <pending> sur Minikube.
 
 ## ⚙️ Infrastructure as Code
 - Terraform modules
