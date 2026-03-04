@@ -28,3 +28,11 @@ Nodegroup CREATE_FAILED (Free Tier incompatibility).
 terraform init
 terraform plan
 terraform apply
+
+```mermaid
+graph TD
+  Internet --> IGW
+  IGW --> PublicSubnet
+  PublicSubnet --> NAT
+  NAT --> PrivateSubnet
+  PrivateSubnet --> EKS
