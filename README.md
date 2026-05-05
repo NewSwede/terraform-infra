@@ -1,4 +1,4 @@
-# Terraform Infrastructure
+# Terraform Infrastructure – AWS Dev Environment
 
 Infrastructure as Code project built with Terraform to provision and manage AWS resources in a modular, environment-oriented layout.
 
