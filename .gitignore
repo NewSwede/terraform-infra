@@ -2,8 +2,10 @@
 **/.terraform/*
 **/terraform.tfstate
 **/terraform.tfstate.*
+errored.tfstate
 **/crash.log
 **/crash.*.log
+*.tfvars
 
 # CLI creds / keys
 **/*.pem

@@ -2,42 +2,158 @@ name: Terraform
 
 on:
   pull_request:
+    paths:
+      - "bootstrap/**"
+      - "envs/**"
+      - "modules/**"
+      - ".github/workflows/terraform.yml"
   push:
     branches: [main]
+    paths:
+      - "bootstrap/**"
+      - "envs/**"
+      - "modules/**"
+      - ".github/workflows/terraform.yml"
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
-  terraform:
+  fmt:
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: eu-west-3
-    steps:
-      - uses: actions/checkout@v4
+    defaults:
+      run:
+        shell: bash
 
-      - uses: hashicorp/setup-terraform@v3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.8.5"
+          terraform_wrapper: false
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Terraform fmt (check)
+        run: terraform fmt -check -recursive
+
+  validate:
+    runs-on: ubuntu-latest
+    needs: fmt
+    strategy:
+      fail-fast: false
+      matrix:
+        stack:
+          - bootstrap
+          - envs/dev-vpc
+          - envs/dev-eks
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      AWS_REGION: eu-west-3
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.8.5"
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || env.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform fmt (check)
-        working-directory: envs/dev-vpc
-        run: terraform fmt -check -recursive
+      - name: Terraform init
+        working-directory: ${{ matrix.stack }}
+        run: terraform init -input=false
+
+      - name: Terraform validate
+        working-directory: ${{ matrix.stack }}
+        run: terraform validate
+
+  plan-dev-vpc:
+    runs-on: ubuntu-latest
+    needs: validate
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      AWS_REGION: eu-west-3
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_my_ip_cidr: "0.0.0.0/32"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.8.5"
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform init
         working-directory: envs/dev-vpc
         run: terraform init -input=false
 
-      - name: Terraform validate
-        working-directory: envs/dev-vpc
-        run: terraform validate
-
       - name: Terraform plan
+        id: plan
         working-directory: envs/dev-vpc
-        run: terraform plan -input=false -no-color
+        run: |
+          set -o pipefail
+          terraform plan -input=false -no-color | tee plan.txt
+
+      - name: Upload plan artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-dev-vpc
+          path: envs/dev-vpc/plan.txt
+          retention-days: 7
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('envs/dev-vpc/plan.txt', 'utf8');
+            const body = [
+              '## Terraform plan (envs/dev-vpc)',
+              '```',
+              plan.length > 60000 ? plan.slice(0, 60000) + '\n...truncated' : plan,
+              '```'
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });

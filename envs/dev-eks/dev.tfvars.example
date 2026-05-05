@@ -1,0 +1,20 @@
+project      = "terraform-infra"
+env          = "dev"
+cluster_name = "dev-eks"
+
+cluster_version = "1.29"
+
+# Restrict this in real environments.
+# Example: ["203.0.113.10/32"]
+cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
+
+# Remote state for envs/dev-vpc.
+vpc_state_bucket     = "tfstate-terraform-infra-0d47477c"
+vpc_state_key        = "dev-vpc/terraform.tfstate"
+vpc_state_region     = "eu-west-3"
+vpc_state_lock_table = "terraform-locks-terraform-infra"
+
+node_instance_types = ["t3.micro", "t2.micro"]
+desired_size        = 0
+min_size            = 0
+max_size            = 1
