@@ -1,12 +1,10 @@
-# trigger second run
-
 terraform {
-  cloud {
-    organization = "sylva-devops"
-
-    workspaces {
-      name = "dev"
-    }
+  backend "s3" {
+    bucket         = "tfstate-terraform-infra-0d47477c"
+    key            = "dev/terraform.tfstate"
+    region         = "eu-west-3"
+    dynamodb_table = "terraform-locks-terraform-infra"
+    encrypt        = true
   }
 
   required_providers {

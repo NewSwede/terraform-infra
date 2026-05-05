@@ -1,0 +1,7 @@
+# Restrict SSH access to your current public IP.
+# Example: "203.0.113.10/32"
+my_ip_cidr = "x.x.x.x/32"
+
+# Defaults match the bootstrap stack outputs used in this repository.
+state_bucket_name   = "tfstate-terraform-infra-0d47477c"
+state_bucket_prefix = "dev-vpc/"
